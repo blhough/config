@@ -21,7 +21,7 @@ vim.o.relativenumber = true
 vim.o.tabstop = 4
 vim.o.softtabstop = 4
 vim.o.shiftwidth = 4
-vim.o.expandtab = true
+vim.o.expandtab = false
 vim.o.smartindent = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
@@ -40,6 +40,14 @@ end)
 
 -- Enable break indent
 vim.o.breakindent = true
+
+vim.o.winborder = 'rounded'
+
+-- vim.o.exrc = true -- allow project-local .nvim.lua or init.vim
+-- vim.o.secure = false -- protect against unsafe commands
+vim.opt.makeprg = 'cmd /c build.bat'
+vim.opt.autowriteall = true
+vim.opt.autoread = true
 
 -- Save undo history
 vim.o.undofile = true
@@ -121,6 +129,8 @@ vim.keymap.set('n', '<F4>', function()
   end
 end, { desc = 'Quickfix Next (wrap)' })
 
+vim.keymap.set({ 'n', 'v' }, '<F5>', ':make<CR>')
+
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
@@ -161,6 +171,27 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.hl.on_yank()
+  end,
+})
+
+vim.api.nvim_create_autocmd('BufEnter', {
+  desc = 'Disable auto comment on new line',
+  callback = function()
+    vim.o.formatoptions = vim.o.formatoptions:gsub('o', ''):gsub('c', '')
+  end,
+})
+
+-- Auto-reload files changed outside of Neovim
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'CursorHold', 'CursorHoldI' }, {
+  callback = function()
+    vim.cmd 'checktime'
+  end,
+})
+
+-- Notify when file was reloaded
+vim.api.nvim_create_autocmd('FileChangedShellPost', {
+  callback = function()
+    vim.api.nvim_echo({ { 'File changed on disk. Buffer reloaded.', 'WarningMsg' } }, false, {})
   end,
 })
 
@@ -246,33 +277,43 @@ require('lazy').setup({
   },
 
   {
-    'okuuva/auto-save.nvim',
-    version = '^1.0.0', -- see https://devhints.io/semver, alternatively use '*' to use the latest tagged release
-    opts = {
-      enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
-      trigger_events = { -- See :h events
-        immediate_save = {
-          { 'BufLeave', pattern = { '*.c', '*.h' } },
-          { 'FocusLost', pattern = { '*.c', '*.h' } },
-          { 'QuitPre', pattern = { '*.c', '*.h' } },
-          { 'VimSuspend', pattern = { '*.c', '*.h' } }, -- vim events that trigger an immediate save
-        },
-        defer_save = {}, -- { "InsertLeave", "TextChanged" }, -- vim events that trigger a deferred save (saves after `debounce_delay`)
-        cancel_deferred_save = {}, -- { "InsertEnter" }, -- vim events that cancel a pending deferred save
-      },
-      -- function that takes the buffer handle and determines whether to save the current buffer or not
-      -- return true: if buffer is ok to be saved
-      -- return false: if it's not ok to be saved
-      -- if set to `nil` then no specific condition is applied
-      condition = nil,
-      write_all_buffers = false, -- write all buffers when the current one meets `condition`
-      noautocmd = false, -- do not execute autocmds when saving
-      lockmarks = false, -- lock marks when saving, see `:h lockmarks` for more details
-      debounce_delay = 1000, -- delay after which a pending save is executed
-      -- log debug messages to 'auto-save.log' file in neovim cache directory, set to `true` to enable
-      debug = false,
-    },
+    'ggandor/leap.nvim',
+    event = 'VeryLazy',
+    opts = {},
+    config = function()
+      vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
+      vim.keymap.set('n', 'S', '<Plug>(leap-from-window)')
+    end,
   },
+
+  -- {
+  --   'okuuva/auto-save.nvim',
+  --   version = '^1.0.0', -- see https://devhints.io/semver, alternatively use '*' to use the latest tagged release
+  --   opts = {
+  --     enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
+  --     trigger_events = { -- See :h events
+  --       immediate_save = {
+  --         { 'BufLeave', pattern = { '*.c', '*.h' } },
+  --         { 'FocusLost', pattern = { '*.c', '*.h' } },
+  --         { 'QuitPre', pattern = { '*.c', '*.h' } },
+  --         { 'VimSuspend', pattern = { '*.c', '*.h' } }, -- vim events that trigger an immediate save
+  --       },
+  --       defer_save = {}, -- { "InsertLeave", "TextChanged" }, -- vim events that trigger a deferred save (saves after `debounce_delay`)
+  --       cancel_deferred_save = {}, -- { "InsertEnter" }, -- vim events that cancel a pending deferred save
+  --     },
+  --     -- function that takes the buffer handle and determines whether to save the current buffer or not
+  --     -- return true: if buffer is ok to be saved
+  --     -- return false: if it's not ok to be saved
+  --     -- if set to `nil` then no specific condition is applied
+  --     condition = nil,
+  --     write_all_buffers = false, -- write all buffers when the current one meets `condition`
+  --     noautocmd = false, -- do not execute autocmds when saving
+  --     lockmarks = false, -- lock marks when saving, see `:h lockmarks` for more details
+  --     debounce_delay = 1000, -- delay after which a pending save is executed
+  --     -- log debug messages to 'auto-save.log' file in neovim cache directory, set to `true` to enable
+  --     debug = false,
+  --   },
+  -- },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
@@ -538,7 +579,7 @@ require('lazy').setup({
 
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
-          map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
+          map('<F2>', vim.lsp.buf.rename, 'Rename')
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
@@ -672,8 +713,26 @@ require('lazy').setup({
       --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+      vim.lsp.config.clangd = {
+        cmd = {
+          'clangd',
+          '--function-arg-placeholders=0',
+          '--header-insertion=never',
+          '--header-insertion-decorators=0',
+        },
+      }
       local servers = {
-        clangd = {},
+        clangd = {
+          setup = {
+            cmd = {
+              'clangd',
+              '--function-arg-placeholders=0',
+              '--header-insertion=never',
+              '--header-insertion-decorators=0',
+            },
+          },
+        },
+        zls = {},
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -785,31 +844,31 @@ require('lazy').setup({
     version = '1.*',
     dependencies = {
       -- Snippet Engine
-      {
-        'L3MON4D3/LuaSnip',
-        version = '2.*',
-        build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
-          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-            return
-          end
-          return 'make install_jsregexp'
-        end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
-        },
-        opts = {},
-      },
+      -- {
+      --   'L3MON4D3/LuaSnip',
+      --   version = '2.*',
+      --   build = (function()
+      --     -- Build Step is needed for regex support in snippets.
+      --     -- This step is not supported in many windows environments.
+      --     -- Remove the below condition to re-enable on windows.
+      --     if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
+      --       return
+      --     end
+      --     return 'make install_jsregexp'
+      --   end)(),
+      --   dependencies = {
+      --     -- `friendly-snippets` contains a variety of premade snippets.
+      --     --    See the README about individual language/framework/plugin snippets:
+      --     --    https://github.com/rafamadriz/friendly-snippets
+      --     -- {
+      --     --   'rafamadriz/friendly-snippets',
+      --     --   config = function()
+      --     --     require('luasnip.loaders.from_vscode').lazy_load()
+      --     --   end,
+      --     -- },
+      --   },
+      --   opts = {},
+      -- },
       'folke/lazydev.nvim',
     },
     --- @module 'blink.cmp'
@@ -852,7 +911,8 @@ require('lazy').setup({
       completion = {
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = false, auto_show_delay_ms = 500 },
+        documentation = { auto_show = true, auto_show_delay_ms = 500 },
+        ghost_text = { enabled = true },
       },
 
       sources = {
@@ -862,7 +922,7 @@ require('lazy').setup({
         },
       },
 
-      snippets = { preset = 'luasnip' },
+      -- snippets = { preset = 'luasnip' },
 
       -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
       -- which automatically downloads a prebuilt binary when enabled.
@@ -871,7 +931,10 @@ require('lazy').setup({
       -- the rust implementation via `'prefer_rust_with_warning'`
       --
       -- See :h blink-cmp-config-fuzzy for more information
-      fuzzy = { implementation = 'prefer_rust_with_warning' },
+      fuzzy = {
+        implementation = 'prefer_rust_with_warning',
+        sorts = { 'score', 'sort_text' },
+      },
 
       -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
@@ -937,17 +1000,12 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'c_sharp', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'zig' },
       -- Autoinstall languages that are not installed
-      auto_install = true,
       highlight = {
         enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = { 'ruby' },
       },
-      indent = { enable = true, disable = { 'ruby' } },
+      indent = { enable = true },
     },
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
