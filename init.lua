@@ -1,8 +1,8 @@
--- Set <space> as the leader key
--- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+
+vim.o.termguicolors = true
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = false
@@ -45,7 +45,7 @@ vim.o.winborder = 'rounded'
 
 -- vim.o.exrc = true -- allow project-local .nvim.lua or init.vim
 -- vim.o.secure = false -- protect against unsafe commands
-vim.opt.makeprg = 'cmd /c build.bat'
+vim.opt.makeprg = './build.sh'
 vim.opt.autowriteall = true
 vim.opt.autoread = true
 
@@ -104,7 +104,7 @@ vim.keymap.set('x', 'y', 'y`>')
 vim.keymap.set('x', 'p', '"_dP')
 
 -- Make 'D' delete the entire line
-vim.keymap.set('n', 'D', 'dd')
+vim.keymap.set('n', 'D', '"_dd')
 
 -- Move lines up and down
 vim.keymap.set('n', '<A-j>', ':m .+1<CR>')
@@ -139,6 +139,8 @@ vim.keymap.set({ 'n', 'v' }, '<F5>', ':make<CR>')
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
+vim.keymap.set('n', '{', '16kzz')
+vim.keymap.set('n', '}', '16jzz')
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
@@ -734,7 +736,7 @@ require('lazy').setup({
         },
         zls = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -940,20 +942,26 @@ require('lazy').setup({
       signature = { enabled = true },
     },
   },
-
-  { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'Mofiqul/vscode.nvim',
+  -- { -- You can easily change to a different colorscheme.
+  --   -- Change the name of the colorscheme plugin below, and then
+  --   -- change the command in the config to whatever the name of that colorscheme is.
+  --   --
+  --   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+  --   'Mofiqul/vscode.nvim',
+  --   lazy = false,
+  --   priority = 1000, -- Make sure to load this before all the other start plugins.
+  --   config = function()
+  --     vim.cmd.colorscheme 'vscode'
+  --   end,
+  -- },
+  {
+    'sainnhe/sonokai',
     lazy = false,
     priority = 1000, -- Make sure to load this before all the other start plugins.
     config = function()
-      vim.cmd.colorscheme 'vscode'
+      vim.cmd.colorscheme 'sonokai'
     end,
   },
-
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
